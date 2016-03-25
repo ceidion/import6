@@ -11,7 +11,7 @@
 
         public CustomHeader[] Headers { get; set; }
         public MimeType[] MimeTypes { get; set; }
-        public CustomError[] CustomErrors { get; set; }                        
+        public CustomError[] Errors { get; set; }                        
     }
 
     public class CustomHeader
