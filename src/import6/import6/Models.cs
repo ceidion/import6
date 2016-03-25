@@ -7,6 +7,7 @@
         public string MetaName { get; set; }
         public string State { get; set; }
         public bool HasSSL { get; set; }
+        public bool EnableDirBrowsing { get; set; }
 
         public CustomHeader[] Headers { get; set; }
         public MimeType[] MimeTypes { get; set; }
