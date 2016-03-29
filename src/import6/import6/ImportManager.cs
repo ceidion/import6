@@ -9,6 +9,20 @@
     public class ImportManager
     {
         private DataAccess data;
+        private string _host;
+        private string _plan;
+        private string _port;
+        private string _key;
+
+
+        public ImportManager(string hostName, string plan, string port, string key)
+        {
+            data = new DataAccess();
+            this._host = hostName;
+            this._plan = plan;
+            this._port = port;
+            this._key = key;
+        }
 
         public ImportManager()
         {
@@ -47,35 +61,24 @@
                     d.EnableSSL = isSSLEnabled(item);
 
                     tmp.Add(d);
-
-                    //foreach (var z in item.Properties)
-                    //{
-                    //    Console.WriteLine("{0}: {1} ({2})",z.Name, z.Value, z.Type);
-
-                    //    if (z.Value is ManagementBaseObject[])
-                    //    {
-                    //        foreach (var si in (ManagementBaseObject[])z.Value)
-                    //        {
-                    //            foreach (var mi in si.Properties)
-                    //            {
-                    //                Console.WriteLine("{0}: {1}", mi.Name, mi.Value);
-                    //            }
-                    //        }
-                    //    }
-                    //}
                 }
             }
 
             return tmp;
         }
 
-        public string GetAllDomainsAsScript(string where = "")
+        public string GetAllDomainsAsScript(string where = "", bool addwebsite=false)
         {
             var sb = new StringBuilder();
             var list = GetAllDomains(where);
 
             foreach (var item in list)
             {
+
+                if (addwebsite)
+                    sb.AppendFormat("curl -d \"name={0}&planAlias={4}\" http://{1}:{2}/Api/v1/Domain/Create?key={3}", 
+                                                                        item.Name, _host, _port, _key, _plan).AppendLine();
+
                 if (item.EnableDirBrowsing)
                     sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/directoryBrowse /enabled:\"True\"", 
                                                                                                                     item.Name).AppendLine();
@@ -114,18 +117,6 @@
             return list.ToArray();
         }
 
-        public string GetAllMimeTypesAsScript()
-        {
-            var sb = new StringBuilder();
-            var list = GetAllMimeTypes();
-
-            foreach (var item in list)            
-                sb.AppendFormat("appcmd.exe set config -section:system.webServer/staticContent /+\"[fileExtension='{0}',mimeType='{1}']\" /commit:apphost", 
-                                                                                                                                        item.Extension, item.MType)
-                                                                                                                                        .AppendLine();
-            return sb.ToString();
-        }
-
         private void GetDomainPath(string metaName, out string domainPath, out CustomError[] errors, out CustomHeader[] headers, out MimeType[] mimes)
         {
             mimes = new List<MimeType>().ToArray();
@@ -147,8 +138,7 @@
 
                     break;
                 }
-            }
-            
+            }            
         }
 
         private bool isSSLEnabled(ManagementObject item)

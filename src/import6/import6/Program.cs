@@ -1,15 +1,28 @@
 ﻿namespace import6
 {
+    using CommandLine;
+    using System;
     using System.Collections.Generic;
     using System.Management;
+    using System.Text;
 
     class Program
     {
         static void Main(string[] args)
         {
-            var mng = new ImportManager();
-            var script = mng.GetAllDomainsAsScript();
-            System.Console.WriteLine(script);
+            var options = new Options();
+            var result = CommandLine.Parser.Default.ParseArguments(args, options);
+
+            if (!result)
+            {
+                Console.WriteLine("Invalid parameters");
+                System.Environment.Exit(1);
+            }
+
+            var mng = new ImportManager(options.Host, options.Plan, options.Port, options.APIKey);
+            var script = mng.GetAllDomainsAsScript(addwebsite: options.Create);
+
+            Console.WriteLine(script);
 
             //TestPrint();
         }
@@ -44,5 +57,48 @@
             }
         }
 
-    }    
+    }
+
+    public class Options
+    {
+        [Option('c', "create", HelpText = "Add create web site script", DefaultValue=false)]
+        public bool Create { get; set; }
+
+        [Option('k', "key", HelpText = "MaestroPanel API Key")]
+        public string APIKey { get; set; }
+
+        [Option('h', "host", HelpText = "MaestroPanel Host")]
+        public string Host { get; set; }
+
+        [Option('p', "port", DefaultValue = "9715", HelpText = "MaestroPanel Port")]
+        public string Port { get; set; }
+
+        [Option('s', "ssl", DefaultValue = false, HelpText = "MaestroPanel Enable SSL")]
+        public bool SSL { get; set; }
+
+        [Option('d', "plan", HelpText = "Domain Plan Name", DefaultValue="default")]
+        public string Plan { get; set; }
+
+        [HelpOption]
+        public string Usage()
+        {
+            var usage = new StringBuilder();
+            usage.AppendLine("MaestroPanel IIS 6 Import Tool");
+            usage.AppendLine("");
+            usage.AppendLine("Parameters:");
+            usage.AppendLine("");
+            usage.AppendLine("\tkey: MaestroPanel API Key");
+            usage.AppendLine("\thost: MaestroPanel Web Management Service Host. IP or Hostname");
+            usage.AppendLine("\tport: MaestroPanel Web Management Service Port. Default 9715");
+            usage.AppendLine("\tssl: Use SSL protocols access to MaestroPanel. Default false");
+            usage.AppendLine("\tplan: MaestroPanel domain plan");
+            usage.AppendLine("\tcreate: Generate curl script for create web site");
+            usage.AppendLine("");
+            usage.AppendLine("Usage:");
+            usage.AppendLine("");
+            usage.AppendLine("import6 --create --key 1_885bd9d868494d078d4394809f5ca7ac --host 192.168.5.2 --plan default");            
+
+            return usage.ToString();
+        }
+    }
 }
