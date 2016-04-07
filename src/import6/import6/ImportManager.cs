@@ -99,6 +99,26 @@
             return sb.ToString();
         }
 
+        public string GenerateRobocopyScript(string destinationPath, string sourcePath = "", string where = "")
+        {               
+            var sb = new StringBuilder();            
+            var list = GetAllDomains(where);
+
+            sb.AppendLine("@echo off");
+
+            foreach (var item in list)
+            {
+                var newpath = destinationPath.Replace("{DOMAIN}", item.Name);
+                var newSourcePath = String.IsNullOrEmpty(sourcePath) ? item.Path : sourcePath.Replace("{DOMAIN}", item.Name);
+
+                sb.AppendFormat("robocopy \"{0}\" \"{1}\" /Z /ETA /MIR", newSourcePath, newpath)
+                    .AppendLine();
+            }
+
+            return sb.ToString();
+        }
+
+
         public MimeType[] GetAllMimeTypes()
         {
             var list = new List<MimeType>();

@@ -2,8 +2,6 @@
 {
     using CommandLine;
     using System;
-    using System.Collections.Generic;
-    using System.Management;
     using System.Text;
 
     class Program
@@ -15,16 +13,14 @@
 
             if (!result)
             {
-                Console.WriteLine("Invalid parameters");
+                Console.WriteLine("Invalid parameters.");
                 System.Environment.Exit(1);
             }
 
-            var mng = new ImportManager(options.Host, options.Plan, options.Port, options.APIKey);
-            var script = mng.GetAllDomainsAsScript(addwebsite: options.Create);
-
-            Console.WriteLine(script);
-
-            //TestPrint();
+            var mng = new ImportManager(options.Host, options.Plan, options.Port, options.APIKey);            
+            var script = mng.GenerateRobocopyScript(options.RemotePath, sourcePath: options.SourcePath);
+            
+            Console.WriteLine(script);            
         }
 
         static void TestPrint()
@@ -78,6 +74,12 @@
 
         [Option('d', "plan", HelpText = "Domain Plan Name", DefaultValue="default")]
         public string Plan { get; set; }
+
+        [Option('r', "remotepath", HelpText = "Remote Path Pattern")]
+        public string RemotePath { get; set; }
+
+        [Option('t', "sourcepath", HelpText = "Remote Path Pattern")]
+        public string SourcePath { get; set; }
 
         [HelpOption]
         public string Usage()
