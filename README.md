@@ -45,7 +45,17 @@ Import6 aracı komut satırı (command line) üzerinden çalışmaktadır. Uygul
 >
 > __plan:__ Domain'in açılacağı Domain Planı Alias'ı. MaestroPanel üzerinden ayarlanabilir.
 >
-> __create:__ IIS 7+ komutları hazırlanırken MaestroPanel için yeni domain ekleme komutunun eklenip eklenmeyeceğini belirler.
+> __dumpdirbrowsing:__ Dosya listeleme özelliğinin scriptlerini oluşturur.
+>
+> __dumpmimetypes:__ Web sitesine özel tanılanmış mime-type'ların scriptlerini oluşturur.
+>
+> __dumpHttpErrors:__ Web sitesine özel tanımlanmış http hata sayfalarının scriptlerini oluşturur.
+>
+> __dumpheaders:__ Web sitesine özel tanımlanmış Http Header bilgilerinin scriptlerini oluşturur.
+>
+> __dumwebsite:__ Web sitesini oluşturan MaestroPanel API fonksiyonunun CURL scriptini oluşturur.
+>
+> __dumpalias:__ Web sitesine tanımlı olan diğer isimlerin MaestroPanel API Fonksinunun CURL scriptini oluşturur.       
 
 Import6 aracının çıktısını direkt IIS 7+ çalışan sunucuda çalıştırmanız yeterli.
 

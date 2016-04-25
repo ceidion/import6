@@ -12,7 +12,15 @@
 
         public CustomHeader[] Headers { get; set; }
         public MimeType[] MimeTypes { get; set; }
-        public CustomError[] HttpErrors { get; set; }                        
+        public CustomError[] HttpErrors { get; set; }
+        public Binding[] Bindings { get; set; }           
+    }
+
+    public class Binding
+    {
+        public string Hostname { get; set; }
+        public string Port { get; set; }
+
     }
 
     public class CustomHeader

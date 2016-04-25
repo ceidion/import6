@@ -14,7 +14,6 @@
         private string _port;
         private string _key;
 
-
         public ImportManager(string hostName, string plan, string port, string key)
         {
             data = new DataAccess();
@@ -59,6 +58,7 @@
                     d.Path = domainPath;
                     d.EnableDirBrowsing = data.GetValue<bool>(item, "EnableDirBrowsing");
                     d.EnableSSL = isSSLEnabled(item);
+                    d.Bindings = GetDomainBindings(item);
 
                     tmp.Add(d);
                 }
@@ -67,7 +67,12 @@
             return tmp;
         }
 
-        public string GetAllDomainsAsScript(string where = "", bool addwebsite=false)
+        public string GenerateAppCmdScripts(string where = "", 
+                                                            bool dumpWebsite=false, 
+                                                            bool dumpDirBrowsing=false, 
+                                                            bool dumpHeaders=false, 
+                                                            bool dumpHttpErrors=false, 
+                                                            bool dumpMimetypes=false)
         {
             var sb = new StringBuilder();
             var list = GetAllDomains(where);
@@ -75,24 +80,26 @@
             foreach (var item in list)
             {
 
-                if (addwebsite)
+                if (dumpWebsite)
                     sb.AppendFormat("curl -d \"name={0}&planAlias={4}\" http://{1}:{2}/Api/v1/Domain/Create?key={3}", 
                                                                         item.Name, _host, _port, _key, _plan).AppendLine();
 
-                if (item.EnableDirBrowsing)
-                    sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/directoryBrowse /enabled:\"True\"", 
+                if(dumpDirBrowsing)
+                    if (item.EnableDirBrowsing)
+                        sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/directoryBrowse /enabled:\"True\"", 
                                                                                                                     item.Name).AppendLine();
 
-                foreach (var header in item.Headers)                
-                    sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/httpProtocol /+\"customHeaders.[name='{1}',value='{2}']\"", 
-                                                                                                                item.Name, header.Name, header.Value).AppendLine();                
-
-                foreach (var error in item.HttpErrors)                
-                    sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/httpErrors /[statusCode='{1}',subStatusCode='-1'].prefixLanguageFilePath:\"{2}\" /[statusCode='{1}',subStatusCode='-1'].responseMode:\"{3}\""
+                if(dumpHeaders)
+                    foreach (var header in item.Headers)                
+                        sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/httpProtocol /+\"customHeaders.[name='{1}',value='{2}']\"", 
+                                                                                                                item.Name, header.Name, header.Value).AppendLine();
+                if(dumpHttpErrors)
+                    foreach (var error in item.HttpErrors)                
+                        sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/httpErrors /[statusCode='{1}',subStatusCode='-1'].prefixLanguageFilePath:\"{2}\" /[statusCode='{1}',subStatusCode='-1'].responseMode:\"{3}\""
                                                                                     ,item.Name, error.HttpErrorCode, error.HandlerLocation, error.HandlerType).AppendLine();
-
-                foreach (var mime in item.MimeTypes)                
-                    sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/staticContent /+\"[fileExtension='{1}',mimeType='{0}']\" ",
+                if(dumpMimetypes)
+                    foreach (var mime in item.MimeTypes)                
+                        sb.AppendFormat("appcmd.exe set config \"{0}\" -section:system.webServer/staticContent /+\"[fileExtension='{1}',mimeType='{0}']\" ",
                                                                                                             item.Name, mime.Extension, mime.MType).AppendLine();                
             }
 
@@ -118,7 +125,6 @@
             return sb.ToString();
         }
 
-
         public MimeType[] GetAllMimeTypes()
         {
             var list = new List<MimeType>();
@@ -137,6 +143,30 @@
             return list.ToArray();
         }
 
+        public string GenerateAddDomainAliasAPIRequests(string where = "")
+        {
+            var sb = new StringBuilder();
+            var list = GetAllDomains(where);
+
+            foreach (var item in list)
+            {
+                if (item.Bindings.Any())
+                {
+                    foreach (var bind in item.Bindings)
+                    {
+                        if (bind.Hostname.IndexOf(item.Name) == -1)
+                        {
+                            if(!bind.Hostname.StartsWith("www"))
+                                sb.AppendFormat("curl -d \"name={0}&alias={4}\" http://{1}:{2}/Api/v1/Domain/AddDomainAlias?key={3}",
+                                                        item.Name, _host, _port, _key, bind.Hostname).AppendLine();
+                        }
+                    }
+                }
+            }
+
+            return sb.ToString();
+        }
+
         private void GetDomainPath(string metaName, out string domainPath, out CustomError[] errors, out CustomHeader[] headers, out MimeType[] mimes)
         {
             mimes = new List<MimeType>().ToArray();
@@ -150,7 +180,7 @@
             using (var query = data.GetProperties(_query))
             {                
                 foreach (ManagementObject item in query)
-                {
+                {                    
                     domainPath = data.GetValue<string>(item, "Path");
                     errors = GetErrorPages(item);
                     headers = GetCustomHeaders(item);
@@ -159,6 +189,30 @@
                     break;
                 }
             }            
+        }
+
+        private Binding[] GetDomainBindings(ManagementObject item)
+        {
+            var currentBinding = new List<Binding>();
+
+            if (item == null)
+                return currentBinding.ToArray();
+
+            var bindins = data.GetValue<ManagementBaseObject[]>(item, "ServerBindings");
+           
+            if (bindins == null)
+                return currentBinding.ToArray();
+
+            foreach (ManagementBaseObject bind in bindins)
+            {
+                var b = new Binding();
+                b.Hostname = data.GetValue<string>(bind, "Hostname");
+                b.Port = data.GetValue<string>(bind, "Port");
+
+                currentBinding.Add(b);                
+            }
+
+            return currentBinding.ToArray();
         }
 
         private bool isSSLEnabled(ManagementObject item)
@@ -187,7 +241,11 @@
 
         private CustomHeader[] GetCustomHeaders(ManagementObject item)
         {
-            var list = new List<CustomHeader>();            
+            var list = new List<CustomHeader>();
+
+            if (item == null)
+                return list.ToArray();
+
             var headers = data.GetValue<ManagementBaseObject[]>(item, "HttpCustomHeaders");
 
             if (headers == null)
@@ -223,9 +281,19 @@
         private CustomError[] GetErrorPages(ManagementObject item)
         {
             var list = new List<CustomError>();
+
+            if (item == null)
+                return list.ToArray();
+
             var errors = data.GetValue<ManagementBaseObject[]>(item, "HttpErrors");
 
             if (errors == null)
+                return list.ToArray();
+
+            if(!errors.Any())
+                return list.ToArray();
+
+            if(errors.Count() < 3)
                 return list.ToArray();
 
             foreach (ManagementBaseObject error in errors)
@@ -252,6 +320,11 @@
         private MimeType[] GetMimeTypes(ManagementObject item)
         {           
             var list = new List<MimeType>();
+
+
+            if (item == null)
+                return list.ToArray();
+
             var mimes = data.GetValue<ManagementBaseObject[]>(item, "MimeMap");
 
             if (mimes == null)
