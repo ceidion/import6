@@ -29,7 +29,8 @@ Model
         public CustomHeader[] Headers { get; set; }
         public MimeType[] MimeTypes { get; set; }
         public CustomError[] HttpErrors { get; set; }                        
-    }```
+    }
+```
 
 ## Kullanım
 
