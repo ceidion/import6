@@ -14,7 +14,6 @@
         private string _port;
         private string _key;
 
-
         public ImportManager(string hostName, string plan, string port, string key)
         {
             data = new DataAccess();
@@ -47,8 +46,13 @@
                     CustomHeader[] customHeaders;
                     MimeType[] customMimes;
 
-                    var d = new Domain();
+                    var d = new Domain();                    
+
                     d.Name = data.GetValue<string>(item, "ServerComment");
+
+                    if (d.Name.IndexOf("mp.side.net.tr") != -1)
+                        continue;
+
                     d.MetaName = data.GetValue<string>(item, "Name");
                     
                     GetDomainPath(d.MetaName, out domainPath, out customErrors, out customHeaders, out customMimes);
@@ -118,7 +122,6 @@
             return sb.ToString();
         }
 
-
         public MimeType[] GetAllMimeTypes()
         {
             var list = new List<MimeType>();
@@ -152,6 +155,7 @@
                 foreach (ManagementObject item in query)
                 {
                     domainPath = data.GetValue<string>(item, "Path");
+
                     errors = GetErrorPages(item);
                     headers = GetCustomHeaders(item);
                     mimes = GetMimeTypes(item);
@@ -223,6 +227,10 @@
         private CustomError[] GetErrorPages(ManagementObject item)
         {
             var list = new List<CustomError>();
+
+            if(item == null)
+                return list.ToArray();
+
             var errors = data.GetValue<ManagementBaseObject[]>(item, "HttpErrors");
 
             if (errors == null)
@@ -230,17 +238,19 @@
 
             foreach (ManagementBaseObject error in errors)
             {
+                
                 var err = new CustomError();
-                err.HandlerLocation = error.GetPropertyValue("HandlerLocation").ToString();
+                err.HandlerLocation = error.Properties["HandlerLocation"] == null ? "" : error.GetPropertyValue("HandlerLocation").ToString();
 
                 //for IIS 7+: Redirect, File, ExecuteURL
                 //for IIS 6: File, URL
-                err.HandlerType = error.GetPropertyValue("HandlerType").ToString();                
-                err.HttpErrorCode = error.GetPropertyValue("HttpErrorCode").ToString();
-                err.HttpErrorSubcode = error.GetPropertyValue("HttpErrorSubcode").ToString();
+
+                err.HandlerType = error.Properties["HandlerType"] == null ? "" : error.GetPropertyValue("HandlerType").ToString();
+                err.HttpErrorCode = error.Properties["HttpErrorCode"] == null ? "" : error.GetPropertyValue("HttpErrorCode").ToString();
+                err.HttpErrorSubcode = error.Properties["HttpErrorCode"] == null ? "" : error.GetPropertyValue("HttpErrorSubcode").ToString();
 
                 if (err.HandlerType == "URL")
-                {                    
+                {
                     err.HandlerType = "ExecuteURL";
                     list.Add(err);
                 }
