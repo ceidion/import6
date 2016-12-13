@@ -17,16 +17,35 @@
                 System.Environment.Exit(1);
             }
 
-            var mng = new ImportManager(options.Host, options.Plan, options.Port, options.APIKey);            
-            var script = mng.GenerateRobocopyScript(options.RemotePath, sourcePath: options.SourcePath);
-            
-            Console.WriteLine(script);            
+            var mng = new ImportManager(options.Host, options.Plan, options.Port, options.APIKey);
+
+            if (options.dumpRobocopy)
+            {
+                var robocopyScript = mng.GenerateRobocopyScript(options.RemotePath, options.SourcePath);
+                Console.WriteLine(robocopyScript);
+            }
+
+            if (options.dumpAlias)
+            {                
+                var domainAliasScripts = mng.GenerateAddDomainAliasAPIRequests();
+                Console.WriteLine(domainAliasScripts);
+            }
+
+            var appcmdScripts = mng.GenerateAppCmdScripts(dumpWebsite: options.dumpWebSite,
+                                                            dumpDirBrowsing:options.dumpDirBrowsing,
+                                                            dumpHeaders: options.dumpHeaders,
+                                                            dumpHttpErrors: options.dumpHttpErrors, 
+                                                            dumpMimetypes: options.dumpMimeTypes);
+
+            Console.WriteLine(appcmdScripts);
+
+            //TestPrint();
         }
 
         static void TestPrint()
         {
             var mng = new ImportManager();
-            var list = mng.GetAllDomains("ServerComment ='idealgayrimenkul.com.tr'");
+            var list = mng.GetAllDomains("ServerComment ='zumrutcam.com.tr'");
 
             foreach (var item in list)
             {
@@ -50,6 +69,11 @@
 
                 foreach (var mime in item.MimeTypes)
                     System.Console.WriteLine("{0}: {1}", mime.Extension, mime.MType);
+
+                foreach (var bind in item.Bindings)
+                {
+                    Console.WriteLine("{0}:{1}",bind.Hostname, bind.Port);
+                }
             }
         }
 
@@ -57,9 +81,6 @@
 
     public class Options
     {
-        [Option('c', "create", HelpText = "Add create web site script", DefaultValue=false)]
-        public bool Create { get; set; }
-
         [Option('k', "key", HelpText = "MaestroPanel API Key")]
         public string APIKey { get; set; }
 
@@ -81,6 +102,27 @@
         [Option('t', "sourcepath", HelpText = "Remote Path Pattern")]
         public string SourcePath { get; set; }
 
+        [Option("dumpalias", HelpText = "Dump domain alias API requests.")]
+        public bool dumpAlias { get; set; }
+
+        [Option("dumprobocopy", HelpText = "Dump Robocopy script.")]
+        public bool dumpRobocopy { get; set; }
+
+        [Option("dumpwebsite", HelpText = "Dump CreateDomain API Functions Curl Request.")]
+        public bool dumpWebSite { get; set; }
+
+        [Option("dumpheaders", HelpText = "Dump Web site Headers appcmd command.")]
+        public bool dumpHeaders { get; set; }
+
+        [Option("dumphttperrors", HelpText = "Dump Web site Http Errors appcmd command.")]
+        public bool dumpHttpErrors { get; set; }
+
+        [Option("dumpmimetypes", HelpText = "Dump Web site Mime-Types appcmd command.")]
+        public bool dumpMimeTypes { get; set; }
+
+        [Option("dumpdirbrowsing", HelpText = "Dump Web site Enable Dir Browsing appcmd command.")]
+        public bool dumpDirBrowsing { get; set; }
+
         [HelpOption]
         public string Usage()
         {
@@ -94,7 +136,13 @@
             usage.AppendLine("\tport: MaestroPanel Web Management Service Port. Default 9715");
             usage.AppendLine("\tssl: Use SSL protocols access to MaestroPanel. Default false");
             usage.AppendLine("\tplan: MaestroPanel domain plan");
-            usage.AppendLine("\tcreate: Generate curl script for create web site");
+            usage.AppendLine("\tdumpalias: Dump domain alias API requests.");
+            usage.AppendLine("\tdumprobocopy: Dump Robocopy script.");
+            usage.AppendLine("\tdumpwebsite: Dump CreateDomain API Functions Curl Request.");
+            usage.AppendLine("\tdumpheaders: Dump Web site Headers appcmd command.");
+            usage.AppendLine("\tdumphttperrors: Dump Web site Http Errors appcmd command.");
+            usage.AppendLine("\tdumpmimetypes: Dump Web site Mime-Types appcmd command.");
+            usage.AppendLine("\tdumpdirbrowsing: Dump Web site Enable Dir Browsing appcmd command.");
             usage.AppendLine("");
             usage.AppendLine("Usage:");
             usage.AppendLine("");
